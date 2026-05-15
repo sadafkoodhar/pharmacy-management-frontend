@@ -68,7 +68,19 @@ const BillingPage = () => {
             const res = await axios.post(`${Config.CORE_API}/receipts/generate`, billData);
             if (res.data.message === "SUCCESS!") {
                 alert("Bill Generated!");
-                setLastSavedReceipt(res.data.data);
+                const enrichedReceipt = {
+                ...res.data.data,
+                items: res.data.data.items.map(resItem => {
+                    const originalMed = cart.find(c => c.id === resItem.id);
+                    return {
+                        ...resItem,
+                        name: originalMed?.name || "Medicine",
+                        salePrice: originalMed?.salePrice || 0
+                    };
+                })
+            };
+
+            setLastSavedReceipt(enrichedReceipt);
                 setCart([]);
                 setCustomerName('');
                 fetchInitialData();
