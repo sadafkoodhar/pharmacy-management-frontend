@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Config } from '../config';
 import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable'; // Naya import style
+import autoTable from 'jspdf-autotable';
 
 const BillingPage = () => {
     const [medicines, setMedicines] = useState([]); 
@@ -11,7 +11,6 @@ const BillingPage = () => {
     const [customerName, setCustomerName] = useState('');
     const [lastSavedReceipt, setLastSavedReceipt] = useState(null);
 
-    // Initial Data Fetch
     const fetchInitialData = async () => {
         try {
             const res = await axios.get(`${Config.CORE_API}/medicines/all`);
@@ -25,19 +24,24 @@ const BillingPage = () => {
         fetchInitialData();
     }, []);
 
-    // Cart Logic
+    // 1. Add to Cart (Multiple Quantity Support)
     const addToCart = (med) => {
         const existing = cart.find(item => item.id === med.id);
         if (existing) {
-            alert("Dawa pehle hi add hai!");
-            return;
+            const updatedCart = cart.map(item => 
+                item.id === med.id ? { ...item, selectedQty: item.selectedQty + 1 } : item
+            );
+            setCart(updatedCart);
+        } else {
+            setCart([...cart, { ...med, selectedQty: 1 }]);
         }
-        setCart([...cart, { ...med, selectedQty: 1 }]);
     };
 
+    // 2. Update Quantity (Single Fixed Function)
     const updateQty = (id, newQty) => {
+        const qty = parseInt(newQty);
         const updatedCart = cart.map(item => 
-            item.id === id ? { ...item, selectedQty: parseInt(newQty) || 1 } : item
+            item.id === id ? { ...item, selectedQty: qty > 0 ? qty : 1 } : item
         );
         setCart(updatedCart);
     };
@@ -47,7 +51,6 @@ const BillingPage = () => {
         setTotal(t);
     }, [cart]);
 
-    // --- 1. Generate Bill ---
     const handleCheckout = async () => {
         if (!customerName) {
             alert("Customer ka naam lazmi likhein!");
@@ -64,23 +67,24 @@ const BillingPage = () => {
         };
 
         try {
-            // URL check: Ensure single /api path
             const res = await axios.post(`${Config.CORE_API}/receipts/generate`, billData);
             if (res.data.message === "SUCCESS!") {
                 alert("Bill Generated!");
+                
+                // Enriched receipt to show name and price in PDF
                 const enrichedReceipt = {
-                ...res.data.data,
-                items: res.data.data.items.map(resItem => {
-                    const originalMed = cart.find(c => c.id === resItem.id);
-                    return {
-                        ...resItem,
-                        name: originalMed?.name || "Medicine",
-                        salePrice: originalMed?.salePrice || 0
-                    };
-                })
-            };
+                    ...res.data.data,
+                    items: res.data.data.items.map(resItem => {
+                        const originalMed = cart.find(c => c.id === resItem.id);
+                        return {
+                            ...resItem,
+                            name: originalMed?.name || "Medicine",
+                            salePrice: originalMed?.salePrice || 0
+                        };
+                    })
+                };
 
-            setLastSavedReceipt(enrichedReceipt);
+                setLastSavedReceipt(enrichedReceipt);
                 setCart([]);
                 setCustomerName('');
                 fetchInitialData();
@@ -91,13 +95,10 @@ const BillingPage = () => {
         }
     };
 
-    // --- 2. Fixed PDF Download Logic ---
     const downloadPDF = () => {
         if (!lastSavedReceipt) return;
-        
         const doc = new jsPDF();
         
-        // Header
         doc.setFontSize(18);
         doc.text("PHARMACY RECEIPT", 70, 15);
         
@@ -106,7 +107,6 @@ const BillingPage = () => {
         doc.text(`Customer: ${lastSavedReceipt.customerName}`, 20, 40);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
 
-        // Table Content
         const tableColumn = ["Item", "Price", "Qty", "Subtotal"];
         const tableRows = lastSavedReceipt.items.map(item => [
             item.name,
@@ -115,7 +115,6 @@ const BillingPage = () => {
             (item.salePrice * item.quantity).toFixed(2)
         ]);
 
-        // Using autoTable as a standalone function
         autoTable(doc, {
             startY: 60,
             head: [tableColumn],
@@ -127,14 +126,12 @@ const BillingPage = () => {
         const finalY = doc.lastAutoTable.finalY;
         doc.setFontSize(14);
         doc.text(`Total Bill: Rs. ${lastSavedReceipt.totalAmount}`, 140, finalY + 15);
-        
         doc.save(`Receipt_${lastSavedReceipt.id}.pdf`);
     };
 
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
             <div className="no-print" style={{ display: 'flex', gap: '30px' }}>
-                {/* Left: Search/Select */}
                 <div style={{ flex: 1, background: '#f9f9f9', padding: '20px', borderRadius: '12px' }}>
                     <h3>Select Medicines</h3>
                     <div style={{ maxHeight: '450px', overflowY: 'auto' }}>
@@ -147,7 +144,6 @@ const BillingPage = () => {
                     </div>
                 </div>
 
-                {/* Right: Cart & Actions */}
                 <div style={{ flex: 1.5, background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd' }}>
                     <h3>Current Bill</h3>
                     <input 
@@ -195,7 +191,6 @@ const BillingPage = () => {
                 </div>
             </div>
 
-            {/* --- Hidden Receipt for Browser Print --- */}
             {lastSavedReceipt && (
                 <div className="print-only" style={{ display: 'none', padding: '30px' }}>
                     <h2 style={{ textAlign: 'center' }}>PHARMACY RECEIPT</h2>
@@ -217,8 +212,8 @@ const BillingPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {lastSavedReceipt.items.map(item => (
-                                <tr key={item.id}>
+                            {lastSavedReceipt.items.map((item, idx) => (
+                                <tr key={idx}>
                                     <td>{item.name}</td>
                                     <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                                     <td style={{ textAlign: 'right' }}>{item.salePrice * item.quantity}</td>
@@ -243,7 +238,6 @@ const BillingPage = () => {
     );
 };
 
-// Styles
 const medItemStyle = { padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', background: '#fff', marginBottom: '5px', borderRadius: '5px' };
 const inputStyle = { width: '95%', padding: '10px', marginBottom: '15px', borderRadius: '5px', border: '1px solid #ccc' };
 const btnStyle = (color) => ({ padding: '10px 20px', backgroundColor: color, color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' });
