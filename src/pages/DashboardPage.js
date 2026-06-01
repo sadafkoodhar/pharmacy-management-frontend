@@ -7,7 +7,9 @@ const DashboardPage = () => {
     const [dashboardData, setDashboardData] = useState({ 
         todayRevenue: 0, 
         lowStockCount: 0, 
-        todayBillCount: 0 
+        todayBillCount: 0 ,
+        totalProfit: 0,
+        totalLoss: 0
     });
     const [medicines, setMedicines] = useState([]); 
     const [expiringSoon, setExpiringSoon] = useState([]); // Expiry state added
