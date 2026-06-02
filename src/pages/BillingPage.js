@@ -11,6 +11,12 @@ const BillingPage = () => {
     const [customerName, setCustomerName] = useState('');
     const [lastSavedReceipt, setLastSavedReceipt] = useState(null);
 
+    // 🔥 STATIC/DYNAMIC CONFIG FOR LOGO AND ADMIN NUMBER
+    const STORE_LOGO_URL = "/logo.png";
+    const STORE_ADMIN_NUMBER = "03032671855"; 
+    const STORE_NAME = "CITI HEALTH CARE";
+    const STORE_ADDRESS = "Pilot SS/93 Phase II, Defence View Karachi";
+
     const fetchInitialData = async () => {
         try {
             const res = await axios.get(`${Config.CORE_API}/medicines/all`);
@@ -24,7 +30,6 @@ const BillingPage = () => {
         fetchInitialData();
     }, []);
 
-    // 1. Add to Cart (Multiple Quantity Support)
     const addToCart = (med) => {
         const existing = cart.find(item => item.id === med.id);
         if (existing) {
@@ -37,7 +42,6 @@ const BillingPage = () => {
         }
     };
 
-    // 2. Update Quantity (Single Fixed Function)
     const updateQty = (id, newQty) => {
         const qty = parseInt(newQty);
         const updatedCart = cart.map(item => 
@@ -62,6 +66,7 @@ const BillingPage = () => {
             items: cart.map(item => ({
                 id: item.id, 
                 quantity: item.selectedQty 
+                // Note: Agar backend single price tracking table accept karta hai toh manual calculation actual profit mein handle ho chuki hai
             })),
             totalAmount: total
         };
@@ -71,7 +76,6 @@ const BillingPage = () => {
             if (res.data.message === "SUCCESS!") {
                 alert("Bill Generated!");
                 
-                // Enriched receipt to show name and price in PDF
                 const enrichedReceipt = {
                     ...res.data.data,
                     items: res.data.data.items.map(resItem => {
@@ -95,43 +99,74 @@ const BillingPage = () => {
         }
     };
 
+    // 📄 MODIFIED: PDF Function with Logo & Contact Details
     const downloadPDF = () => {
         if (!lastSavedReceipt) return;
-        const doc = new jsPDF();
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [80, 150] // Standard 80mm thermal receipt width representation in PDF
+        });
         
-        doc.setFontSize(18);
-        doc.text("PHARMACY RECEIPT", 70, 15);
+        // 1. Adding Logo Image
+        // parameters: addImage(url, type, x, y, width, height)
+        doc.addImage(STORE_LOGO_URL, 'PNG', 20, 8, 40, 30);
         
-        doc.setFontSize(12);
-        doc.text(`Receipt ID: ${lastSavedReceipt.id}`, 20, 30);
-        doc.text(`Customer: ${lastSavedReceipt.customerName}`, 20, 40);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 50);
+        // 2. Store Branded Text
+        doc.setFont("courier", "bold");
+        doc.setFontSize(10);
+        doc.text(STORE_NAME, 40, 30, { align: "center" });
+        
+        doc.setFont("courier", "normal");
+        doc.setFontSize(7);
+        doc.text(STORE_ADDRESS, 40, 34, { align: "center" });
+        
+        // 🔥 Admin Number Injection inside PDF
+        doc.setFont("courier", "bold");
+        doc.text(`STORE CONTACT: ${STORE_ADMIN_NUMBER}`, 40, 38, { align: "center" });
+        
+        // 3. Receipt Metadata
+        doc.setFont("courier", "normal");
+        doc.setFontSize(7);
+        doc.text(`Receipt ID: ${lastSavedReceipt.id}`, 5, 45);
+        doc.text(`Customer  : ${lastSavedReceipt.customerName.toUpperCase()}`, 5, 49);
+        doc.text(`Date      : ${new Date().toLocaleString()}`, 5, 53);
 
-        const tableColumn = ["Item", "Price", "Qty", "Subtotal"];
+        const tableColumn = ["Item", "Price", "Qty", "Total"];
         const tableRows = lastSavedReceipt.items.map(item => [
-            item.name,
-            item.salePrice,
+            item.name.substring(0, 15), // Limiting chars for narrow thermal layout
+            item.salePrice.toFixed(2),
             item.quantity,
             (item.salePrice * item.quantity).toFixed(2)
         ]);
 
         autoTable(doc, {
-            startY: 60,
+            startY: 57,
+            margin: { left: 4, right: 4 },
             head: [tableColumn],
             body: tableRows,
-            theme: 'grid',
-            headStyles: { fillColor: [41, 128, 185] }
+            theme: 'plain', // Plain matches best with dot-matrix thermal look
+            styles: { font: 'courier', fontSize: 7, padding: 1 },
+            headStyles: { fontStyle: 'bold', borderBottom: 1 },
         });
 
         const finalY = doc.lastAutoTable.finalY;
-        doc.setFontSize(14);
-        doc.text(`Total Bill: Rs. ${lastSavedReceipt.totalAmount}`, 140, finalY + 15);
-        doc.save(`Receipt_${lastSavedReceipt.id}.pdf`);
+        doc.setFont("courier", "bold");
+        doc.setFontSize(8);
+        doc.text(`TOTAL AMOUNT: Rs. ${lastSavedReceipt.totalAmount.toFixed(2)}`, 75, finalY + 7, { align: "right" });
+        
+        doc.setFont("courier", "italic");
+        doc.setFontSize(7);
+        doc.text("Thank You for Your Visit!", 40, finalY + 14, { align: "center" });
+
+        const safeCustomerName = lastSavedReceipt.customerName.replace(/\s+/g, '_');
+        doc.save(`CitiHealth_Invoice_${safeCustomerName}.pdf`);
     };
 
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
             <div className="no-print" style={{ display: 'flex', gap: '30px' }}>
+                {/* Medicine Stock Selector Container */}
                 <div style={{ flex: 1, background: '#f9f9f9', padding: '20px', borderRadius: '12px' }}>
                     <h3>Select Medicines</h3>
                     <div style={{ maxHeight: '450px', overflowY: 'auto' }}>
@@ -144,6 +179,7 @@ const BillingPage = () => {
                     </div>
                 </div>
 
+                {/* Active Checkout Processing Billing View Container */}
                 <div style={{ flex: 1.5, background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd' }}>
                     <h3>Current Bill</h3>
                     <input 
@@ -191,46 +227,77 @@ const BillingPage = () => {
                 </div>
             </div>
 
+            {/* 🖨️ MODIFIED: Browser Print-Only Slip View Layout matched to your Image */}
             {lastSavedReceipt && (
-                <div className="print-only" style={{ display: 'none', padding: '30px' }}>
-                    <h2 style={{ textAlign: 'center' }}>PHARMACY RECEIPT</h2>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', margin: '20px 0' }}>
-                        <div>
-                            <p><b>Receipt ID:</b> {lastSavedReceipt.id}</p>
-                            <p><b>Customer:</b> {lastSavedReceipt.customerName}</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <p><b>Date:</b> {new Date().toLocaleDateString()}</p>
-                        </div>
+                <div className="print-only" style={{ display: 'none', padding: '10px', width: '300px', margin: '0 auto', fontFamily: '"Courier New", Courier, monospace', color: '#000' }}>
+                    
+                    {/* 1. Header Print Logo */}
+                    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                        <img src={STORE_LOGO_URL} alt="Logo" style={{ width: '55px', height: '55px', borderRadius: '50%', border: '1px solid #000', padding: '3px' }} />
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+
+                    {/* 2. Branded Store Details and Contact */}
+                    <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 'bold' }}>{STORE_NAME}</h4>
+                        <p style={{ margin: '2px 0', fontSize: '0.8rem' }}>{STORE_ADDRESS}</p>
+                        {/* 🔥 Admin Number Added Here */}
+                        <p style={{ margin: '3px 0', fontSize: '0.85rem', fontWeight: 'bold' }}>{STORE_ADMIN_NUMBER}</p>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', margin: '5px 0' }}>
+                        <span>REG#1348</span>
+                        <span>TRN#8726</span>
+                        <span>CSHR#78134</span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', margin: '2px 0' }}>HELPED BY: SYSTEM ADMIN</p>
+                    <p style={{ fontSize: '0.75rem', margin: '5px 0', textAlign: 'center' }}>{new Date().toLocaleString()}</p>
+                    
+                    <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
+
+                    {/* 3. Items Dynamic Extraction Mapping Loop */}
+                    <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ borderBottom: '1px solid #000' }}>
-                                <th style={{ textAlign: 'left' }}>Item</th>
-                                <th style={{ textAlign: 'center' }}>Qty</th>
-                                <th style={{ textAlign: 'right' }}>Subtotal</th>
+                            <tr style={{ textAlign: 'left' }}>
+                                <th style={{ paddingBottom: '5px' }}>Item</th>
+                                <th style={{ textAlign: 'center', paddingBottom: '5px' }}>Qty</th>
+                                <th style={{ textAlign: 'right', paddingBottom: '5px' }}>Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
                             {lastSavedReceipt.items.map((item, idx) => (
                                 <tr key={idx}>
-                                    <td>{item.name}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                                    <td style={{ textAlign: 'right' }}>{item.salePrice * item.quantity}</td>
+                                    <td style={{ padding: '3px 0' }}>{item.name.toUpperCase()}</td>
+                                    <td style={{ textAlign: 'center', padding: '3px 0' }}>{item.quantity}</td>
+                                    <td style={{ textAlign: 'right', padding: '3px 0' }}>Rs. {(item.salePrice * item.quantity).toFixed(2)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <hr />
-                    <h3 style={{ textAlign: 'right' }}>Total: Rs. {lastSavedReceipt.totalAmount}</h3>
+                    
+                    <div style={{ borderTop: '1px dashed #000', margin: '8px 0' }}></div>
+                    
+                    {/* 4. Total Amount Block */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 'bold', margin: '5px 0' }}>
+                        <span>ITEM COUNT:</span>
+                        <span>{lastSavedReceipt.items.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', fontWeight: 'bold', marginTop: '5px' }}>
+                        <span>TOTAL:</span>
+                        <span>Rs. {lastSavedReceipt.totalAmount.toFixed(2)}</span>
+                    </div>
+
+                    <div style={{ borderTop: '1px dashed #000', margin: '15px 0 5px 0' }}></div>
+                    <p style={{ textAlign: 'center', fontSize: '0.8rem', fontStyle: 'italic', margin: '5px 0' }}>Thank You For Your Visit!</p>
                 </div>
             )}
 
+            {/* Custom Print Overrides Styling Media Rules */}
             <style>
                 {`
                     @media print {
                         .no-print { display: none !important; }
                         .print-only { display: block !important; }
+                        body { background: white; color: black; }
                     }
                 `}
             </style>
