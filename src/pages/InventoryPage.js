@@ -7,6 +7,10 @@ const InventoryPage = () => {
     const [medicines, setMedicines] = useState([]);
     const [isLowStockFilter, setIsLowStockFilter] = useState(false);
 
+    // --- PAGINATION STATES ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const [recordsPerPage] = useState(10);
+
     // --- MODAL STATES ---
     const [editingMed, setEditingMed] = useState(null); // Edit modal ke liye
     const [showDeleteModal, setShowDeleteModal] = useState(false); // Delete modal visibility
@@ -16,7 +20,10 @@ const InventoryPage = () => {
     const fetchMedicines = async () => {
         try {
             const res = await axios.get(`${Config.CORE_API}/medicines/all`);
-            if (res.data.message === "SUCCESS!") setMedicines(res.data.data);
+            if (res.data.message === "SUCCESS!") {
+                setMedicines(res.data.data);
+                setCurrentPage(1); // Reset to first page on fresh fetch
+            }
         } catch (err) { console.error("Error fetching data", err); }
     };
 
@@ -27,6 +34,7 @@ const InventoryPage = () => {
             if (res.data.message === "SUCCESS!") {
                 setMedicines(res.data.data.lowStockMedicines);
                 setIsLowStockFilter(true);
+                setCurrentPage(1); // Reset to first page on filter
             }
         } catch (err) { console.error("Error fetching low stock", err); }
     };
@@ -62,9 +70,27 @@ const InventoryPage = () => {
         } catch (err) { alert("Update failed!"); }
     };
 
+    // --- 5. PAGINATION LOGIC ---
+    const indexOfLastRecord = currentPage * recordsPerPage;
+    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+    
+    // Current page ke 10 records slice karna
+    const currentRecords = medicines.slice(indexOfFirstRecord, indexOfLastRecord);
+    
+    // Total pages calculate karna
+    const totalPages = Math.ceil(medicines.length / recordsPerPage);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(currentPage - 1);
+    };
+
     return (
-        <div style={{ padding: '20px',margin:'20px' ,fontFamily: 'Arial, Helvetica, sans-serif' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '110px' }}>
+        <div style={{ padding: '20px', margin: '20px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
                 <h1>Inventory Management</h1>
                 <ExcelImport onImportSuccess={fetchMedicines} />
             </div>
@@ -74,7 +100,8 @@ const InventoryPage = () => {
                     <button onClick={fetchLowStock} style={lowStockBtnStyle}>⚠️ Show Low Stock Only</button>
                 ) : (
                     <button onClick={handleResetFilter} style={resetBtnStyle}>🔄 Show All Inventory</button>
-                )}
+                )
+            }
             </div>
 
             {/* Main Table */}
@@ -89,19 +116,50 @@ const InventoryPage = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {medicines.map(m => (
-                            <tr key={m.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
-                                <td style={tdStyle}>{m.name}</td>
-                                <td style={tdStyle}>{m.quantity}</td>
-                                <td style={tdStyle}>{m.salePrice}</td>
-                                <td style={tdStyle}>
-                                    <button onClick={() => setEditingMed(m)} style={editBtnStyle}>Edit</button>
-                                    <button onClick={() => openDeleteModal(m.id)} style={deleteBtnStyle}>Delete</button>
-                                </td>
+                        {currentRecords.length > 0 ? (
+                            currentRecords.map(m => (
+                                <tr key={m.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
+                                    <td style={tdStyle}>{m.name}</td>
+                                    <td style={tdStyle}>{m.quantity}</td>
+                                    <td style={tdStyle}>{m.salePrice}</td>
+                                    <td style={tdStyle}>
+                                        <button onClick={() => setEditingMed(m)} style={editBtnStyle}>Edit</button>
+                                        <button onClick={() => openDeleteModal(m.id)} style={deleteBtnStyle}>Delete</button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="4" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>No records found.</td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
+
+                {/* --- PAGINATION CONTROLS CONTROLLER --- */}
+                {totalPages > 1 && (
+                    <div style={paginationContainerStyle}>
+                        <button 
+                            onClick={prevPage} 
+                            disabled={currentPage === 1} 
+                            style={{ ...paginationBtnStyle, opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                        >
+                            ⬅️ Previous
+                        </button>
+                        
+                        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                            Page {currentPage} of {totalPages}
+                        </span>
+
+                        <button 
+                            onClick={nextPage} 
+                            disabled={currentPage === totalPages} 
+                            style={{ ...paginationBtnStyle, opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                        >
+                            Next ➡️
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* --- PROFESSIONAL DELETE MODAL --- */}
@@ -189,8 +247,12 @@ const saveBtn = { background: '#04AA6D', color: 'white', padding: '14px 20px', b
 const thStyle = { padding: '12px 8px' };
 const tdStyle = { padding: '12px 8px' };
 const editBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '6px 12px', marginRight: '8px', cursor: 'pointer', borderRadius: '4px' };
-const deleteBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px' };
+const deleteBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px' }; // Color changed to standard danger red
 const lowStockBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
 const resetBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
+
+// New Pagination Styles
+const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' };
+const paginationBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold' };
 
 export default InventoryPage;

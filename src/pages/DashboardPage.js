@@ -12,9 +12,13 @@ const DashboardPage = () => {
         totalLoss: 0
     });
     const [medicines, setMedicines] = useState([]); 
-    const [expiringSoon, setExpiringSoon] = useState([]); // Expiry state added
+    const [expiringSoon, setExpiringSoon] = useState([]); // Expiry state
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // 🌟 FIX: Pagination States missing thin, unhe add kar diya hai
+    const [currentPage, setCurrentPage] = useState(1);
+    const [recordsPerPage] = useState(10);
 
     useEffect(() => {
         const loadAllData = async () => {
@@ -50,6 +54,24 @@ const DashboardPage = () => {
 
     if (loading) return <h2 style={statusMessageStyle}>Loading Pharmacy System...</h2>;
     if (error) return <h2 style={{...statusMessageStyle, color: 'red'}}>{error}</h2>;
+
+    // --- 5. PAGINATION LOGIC ---
+    const indexOfLastRecord = currentPage * recordsPerPage;
+    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+    
+    // Current page ke 10 records slice karna
+    const currentRecords = medicines.slice(indexOfFirstRecord, indexOfLastRecord);
+    
+    // Total pages calculate karna
+    const totalPages = Math.ceil(medicines.length / recordsPerPage);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(currentPage - 1);
+    };
 
     return (
         <div style={{ padding: '20px' }}>
@@ -89,8 +111,9 @@ const DashboardPage = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {medicines.length > 0 ? (
-                            medicines.map((med) => (
+                        {/* 🌟 FIX: `medicines.map` ki jagah `currentRecords.map` use kiya hai */}
+                        {currentRecords.length > 0 ? (
+                            currentRecords.map((med) => (
                                 <tr key={med.id} style={{ borderBottom: '1px solid #edf2f7' }}>
                                     <td style={tableCellStyle}><strong>{med.name}</strong></td>
                                     <td style={tableCellStyle}>{med.category}</td>
@@ -111,6 +134,31 @@ const DashboardPage = () => {
                         )}
                     </tbody>
                 </table>
+
+                {/* --- PAGINATION CONTROLS CONTROLLER --- */}
+                {totalPages > 1 && (
+                    <div style={paginationContainerStyle}>
+                        <button 
+                            onClick={prevPage} 
+                            disabled={currentPage === 1} 
+                            style={{ ...paginationBtnStyle, opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                        >
+                            ⬅️ Previous
+                        </button>
+                        
+                        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                            Page {currentPage} of {totalPages}
+                        </span>
+
+                        <button 
+                            onClick={nextPage} 
+                            disabled={currentPage === totalPages} 
+                            style={{ ...paginationBtnStyle, opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                        >
+                            Next ➡️
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -139,5 +187,8 @@ const expiryItemStyle = {
     borderLeft: '5px solid #e53e3e',
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
 };
+
+const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' };
+const paginationBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold' };
 
 export default DashboardPage;
