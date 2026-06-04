@@ -6,35 +6,29 @@ import ExcelImport from '../components/ExcelImport';
 const InventoryPage = () => {
     const [medicines, setMedicines] = useState([]);
     const [isLowStockFilter, setIsLowStockFilter] = useState(false);
-
-    // --- PAGINATION STATES ---
     const [currentPage, setCurrentPage] = useState(1);
     const [recordsPerPage] = useState(10);
+    const [editingMed, setEditingMed] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [medToDelete, setMedToDelete] = useState(null);
 
-    // --- MODAL STATES ---
-    const [editingMed, setEditingMed] = useState(null); // Edit modal ke liye
-    const [showDeleteModal, setShowDeleteModal] = useState(false); // Delete modal visibility
-    const [medToDelete, setMedToDelete] = useState(null); // ID track karne ke liye
-
-    // --- 1. FETCH ALL MEDICINES ---
     const fetchMedicines = async () => {
         try {
             const res = await axios.get(`${Config.CORE_API}/medicines/all`);
             if (res.data.message === "SUCCESS!") {
                 setMedicines(res.data.data);
-                setCurrentPage(1); // Reset to first page on fresh fetch
+                setCurrentPage(1);
             }
         } catch (err) { console.error("Error fetching data", err); }
     };
 
-    // --- 2. FETCH LOW STOCK ---
     const fetchLowStock = async () => {
         try {
             const res = await axios.get(`${Config.CORE_API}/medicines/low-stock`);
             if (res.data.message === "SUCCESS!") {
                 setMedicines(res.data.data.lowStockMedicines);
                 setIsLowStockFilter(true);
-                setCurrentPage(1); // Reset to first page on filter
+                setCurrentPage(1);
             }
         } catch (err) { console.error("Error fetching low stock", err); }
     };
@@ -46,7 +40,6 @@ const InventoryPage = () => {
         setIsLowStockFilter(false);
     };
 
-    // --- 3. DELETE LOGIC ---
     const openDeleteModal = (id) => {
         setMedToDelete(id);
         setShowDeleteModal(true);
@@ -60,7 +53,6 @@ const InventoryPage = () => {
         } catch (err) { alert("Delete failed!"); }
     };
 
-    // --- 4. UPDATE LOGIC ---
     const handleUpdateSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -70,68 +62,48 @@ const InventoryPage = () => {
         } catch (err) { alert("Update failed!"); }
     };
 
-    // --- 5. PAGINATION LOGIC ---
     const indexOfLastRecord = currentPage * recordsPerPage;
     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-    
-    // Current page ke 10 records slice karna
     const currentRecords = medicines.slice(indexOfFirstRecord, indexOfLastRecord);
-    
-    // Total pages calculate karna
     const totalPages = Math.ceil(medicines.length / recordsPerPage);
 
-    const nextPage = () => {
-        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-    };
-
-    const prevPage = () => {
-        if (currentPage > 1) setCurrentPage(currentPage - 1);
-    };
-
     return (
-        <div style={{ padding: '15px', margin: '0 auto', maxWidth: '1200px', fontFamily: 'Arial, Helvetica, sans-serif', boxSizing: 'border-box' }}>
-            
-            {/* 🌟 MODIFIED: Added responsive flex layout class for header */}
-            <div className="inventory-header">
-                <h1 style={{ margin: '0 0 15px 0', fontSize: 'calc(1.5rem + 0.5vw)' }}>Inventory Management</h1>
+        <div className="page-container">
+            <div className="header-section">
+                <h1>Inventory Management</h1>
                 <ExcelImport onImportSuccess={fetchMedicines} />
             </div>
 
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+            <div className="filter-section">
                 {!isLowStockFilter ? (
-                    <button onClick={fetchLowStock} className="full-width-mobile-btn" style={lowStockBtnStyle}>⚠️ Show Low Stock Only</button>
+                    <button onClick={fetchLowStock} className="action-btn warning-btn">⚠️ Show Low Stock Only</button>
                 ) : (
-                    <button onClick={handleResetFilter} className="full-width-mobile-btn" style={resetBtnStyle}>🔄 Show All Inventory</button>
-                )
-            }
+                    <button onClick={handleResetFilter} className="action-btn success-btn">🔄 Show All Inventory</button>
+                )}
             </div>
 
-            {/* Main Table Container */}
-            <div style={{ background: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', boxSizing: 'border-box' }}>
-                
-                {/* 🌟 MODIFIED: Scroll Wrapper around the table */}
-                <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                    <table width="100%" style={{ borderCollapse: 'collapse', minWidth: '500px' }}>
+            <div className="card-wrapper">
+                <div className="table-responsive-scroll">
+                    <table className="custom-table">
                         <thead>
-                            <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
-                                <th style={thStyle}>Name</th>
-                                <th style={thStyle}>Stock</th>
-                                <th style={thStyle}>Price</th>
-                                <th style={thStyle}>Actions</th>
+                            <tr>
+                                <th>Name</th>
+                                <th>Stock</th>
+                                <th>Price</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentRecords.length > 0 ? (
                                 currentRecords.map(m => (
-                                    <tr key={m.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
-                                        <td style={tdStyle}>{m.name}</td>
-                                        <td style={tdStyle}>{m.quantity}</td>
-                                        <td style={tdStyle}>{m.salePrice}</td>
-                                        <td style={tdStyle}>
-                                            {/* 🌟 MODIFIED: Flex grouping for small screen buttons alignment */}
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <button onClick={() => setEditingMed(m)} style={editBtnStyle}>Edit</button>
-                                                <button onClick={() => openDeleteModal(m.id)} style={deleteBtnStyle}>Delete</button>
+                                    <tr key={m.id}>
+                                        <td data-label="Name"><b>{m.name}</b></td>
+                                        <td data-label="Stock">{m.quantity}</td>
+                                        <td data-label="Price">Rs. {m.salePrice}</td>
+                                        <td data-label="Actions">
+                                            <div className="actions-flex-group">
+                                                <button onClick={() => setEditingMed(m)} className="edit-mini-btn">Edit</button>
+                                                <button onClick={() => openDeleteModal(m.id)} className="delete-mini-btn">Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -145,88 +117,55 @@ const InventoryPage = () => {
                     </table>
                 </div>
 
-                {/* --- PAGINATION CONTROLS --- */}
                 {totalPages > 1 && (
-                    <div style={paginationContainerStyle} className="pagination-responsive">
-                        <button 
-                            onClick={prevPage} 
-                            disabled={currentPage === 1} 
-                            style={{ ...paginationBtnStyle, opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-                        >
-                            ⬅️ Prev
-                        </button>
-                        
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                            Page {currentPage} of {totalPages}
-                        </span>
-
-                        <button 
-                            onClick={nextPage} 
-                            disabled={currentPage === totalPages} 
-                            style={{ ...paginationBtnStyle, opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
-                        >
-                            Next ➡️
-                        </button>
+                    <div className="pagination-wrapper">
+                        <button onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} disabled={currentPage === 1} className="nav-btn">⬅️ Previous</button>
+                        <span className="page-indicator">Page {currentPage} of {totalPages}</span>
+                        <button onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} className="nav-btn">Next ➡️</button>
                     </div>
                 )}
             </div>
 
-            {/* --- RESPONSIVE DELETE MODAL --- */}
+            {/* Delete Modal */}
             {showDeleteModal && (
-                <div style={modalOverlay}>
-                    <div style={modalContent} className="modal-responsive-box">
-                        <span onClick={() => setShowDeleteModal(false)} style={closeIcon}>&times;</span>
-                        <div style={containerStyle}>
-                            <h2 style={{ fontSize: '1.4rem', margin: '10px 0' }}>Delete Item</h2>
-                            <p style={{ fontSize: '14px', color: '#555' }}>Are you sure you want to delete this medicine record?</p>
-                            <hr style={hrStyle} />
-                            <div style={clearfixStyle} className="modal-clearfix-responsive">
-                                <button onClick={() => setShowDeleteModal(false)} style={cancelBtn}>Cancel</button>
-                                <button onClick={confirmDelete} style={deleteBtn}>Delete</button>
+                <div className="modal-overlay-bg">
+                    <div className="modal-card">
+                        <span onClick={() => setShowDeleteModal(false)} className="modal-close-x">&times;</span>
+                        <div className="modal-body">
+                            <h2>Delete Item</h2>
+                            <p>Are you sure you want to delete this medicine record?</p>
+                            <hr className="modal-hr" />
+                            <div className="modal-buttons-stack">
+                                <button onClick={() => setShowDeleteModal(false)} className="modal-btn cancel-gray">Cancel</button>
+                                <button onClick={confirmDelete} className="modal-btn delete-red">Delete</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* --- RESPONSIVE EDIT MODAL --- */}
+            {/* Edit Modal */}
             {editingMed && (
-                <div style={modalOverlay}>
-                    <div style={editModalBox} className="modal-responsive-box">
-                        <span onClick={() => setEditingMed(null)} style={closeIcon}>&times;</span>
-                        <div style={containerStyle}>
-                            <h2 style={{ fontSize: '1.4rem', margin: '10px 0' }}>Edit Medicine</h2>
-                            <p style={{ fontSize: '14px', color: '#555' }}>Update information for <b>{editingMed.name}</b></p>
-                            <hr style={hrStyle} />
-                            
-                            <form onSubmit={handleUpdateSubmit} style={{ textAlign: 'left' }}>
-                                <label style={labelStyle}>Medicine Name</label>
-                                <input 
-                                    style={inputStyle}
-                                    type="text" 
-                                    value={editingMed.name} 
-                                    onChange={(e) => setEditingMed({...editingMed, name: e.target.value})} 
-                                />
+                <div className="modal-overlay-bg">
+                    <div className="modal-card">
+                        <span onClick={() => setEditingMed(null)} className="modal-close-x">&times;</span>
+                        <div className="modal-body">
+                            <h2>Edit Medicine</h2>
+                            <p>Update information for <b>{editingMed.name}</b></p>
+                            <hr className="modal-hr" />
+                            <form onSubmit={handleUpdateSubmit} className="modal-form">
+                                <label>Medicine Name</label>
+                                <input type="text" value={editingMed.name} onChange={(e) => setEditingMed({...editingMed, name: e.target.value})} required />
 
-                                <label style={labelStyle}>Stock Quantity</label>
-                                <input 
-                                    style={inputStyle}
-                                    type="number" 
-                                    value={editingMed.quantity} 
-                                    onChange={(e) => setEditingMed({...editingMed, quantity: e.target.value})} 
-                                />
+                                <label>Stock Quantity</label>
+                                <input type="number" value={editingMed.quantity} onChange={(e) => setEditingMed({...editingMed, quantity: e.target.value})} required />
 
-                                <label style={labelStyle}>Sale Price</label>
-                                <input 
-                                    style={inputStyle}
-                                    type="number" 
-                                    value={editingMed.salePrice} 
-                                    onChange={(e) => setEditingMed({...editingMed, salePrice: e.target.value})} 
-                                />
+                                <label>Sale Price</label>
+                                <input type="number" value={editingMed.salePrice} onChange={(e) => setEditingMed({...editingMed, salePrice: e.target.value})} required />
 
-                                <div style={clearfixStyle} className="modal-clearfix-responsive">
-                                    <button type="button" onClick={() => setEditingMed(null)} style={cancelBtn}>Cancel</button>
-                                    <button type="submit" style={saveBtn}>Save Changes</button>
+                                <div className="modal-buttons-stack">
+                                    <button type="button" onClick={() => setEditingMed(null)} className="modal-btn cancel-gray">Cancel</button>
+                                    <button type="submit" className="modal-btn save-green">Save Changes</button>
                                 </div>
                             </form>
                         </div>
@@ -234,73 +173,53 @@ const InventoryPage = () => {
                 </div>
             )}
 
-            {/* 🌟 Custom Global CSS Injection for Inventory Specific Media Queries */}
-            <style>
-                {`
-                    .inventory-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 30px;
-                        flex-wrap: wrap;
-                        gap: 15px;
-                    }
-                    @media (max-width: 768px) {
-                        .inventory-header {
-                            flex-direction: column;
-                            align-items: flex-start;
-                        }
-                        .inventory-header > * {
-                            width: 100% !important;
-                        }
-                        .full-width-mobile-btn {
-                            width: 100%;
-                            text-align: center;
-                        }
-                        .modal-responsive-box {
-                            width: 90% !important;
-                            max-width: 450px;
-                            margin: 0 15px;
-                        }
-                        .modal-clearfix-responsive {
-                            flex-direction: column;
-                            gap: 10px;
-                        }
-                        .pagination-responsive {
-                            width: 100%;
-                            justify-content: space-between !important;
-                        }
-                    }
-                `}
-            </style>
+            {/* 🌟 POORA GLOBAL RESPONSIVE CSS INJECTION FOR INVENTORY 🌟 */}
+            <style>{`
+                .page-container { padding: 15px; margin: 0 auto; maxWidth: 1200px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
+                .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+                .header-section h1 { margin: 0; font-size: calc(1.5rem + 0.5vw); color: #1a3a5f; }
+                .filter-section { margin-bottom: 20px; }
+                .action-btn { border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: auto; font-size: 14px; }
+                .warning-btn { background: #5d67f6; color: white; }
+                .success-btn { background: #2ecc71; color: white; }
+                .card-wrapper { background: white; padding: 20px; borderRadius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+                .table-responsive-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                .custom-table { width: 100%; border-collapse: collapse; min-width: 500px; text-align: left; }
+                .custom-table th { padding: 12px; color: #4a5568; border-bottom: 2px solid #edf2f7; font-size: 14px; }
+                .custom-table td { padding: 12px; border-bottom: 1px solid #f1f1f1; font-size: 14px; color: #333; }
+                .actions-flex-group { display: flex; gap: 8px; }
+                .edit-mini-btn { background: #2ecc71; color: white; border: none; padding: 6px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+                .delete-mini-btn { background: #5d67f6;; color: white; border: none; padding: 6px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+                .pagination-wrapper { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+                .nav-btn { background: #5d67f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+                .nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .page-indicator { font-weight: bold; font-size: 13px; }
+                .modal-overlay-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box; }
+                .modal-card { background: white; width: 100%; max-width: 460px; border-radius: 8px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease-out; }
+                .modal-close-x { position: absolute; right: 15px; top: 10px; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; line-height: 1; }
+                .modal-body { padding: 25px; text-align: center; box-sizing: border-box; }
+                .modal-body h2 { margin: 0 0 10px 0; font-size: 20px; color: #2c3e50; }
+                .modal-body p { margin: 0 0 15px 0; color: #718096; font-size: 14px; }
+                .modal-hr { border: 0; border-top: 1px solid #edf2f7; margin-bottom: 15px; }
+                .modal-buttons-stack { display: flex; gap: 10px; width: 100%; }
+                .modal-btn { padding: 12px; border: none; cursor: pointer; width: 100%; border-radius: 6px; font-weight: bold; font-size: 14px; }
+                .cancel-gray { background: #edf2f7; color: #4a5568; }
+                .delete-red { background: #5d67f6;; color: white; }
+                .save-green { background: #04AA6D; color: white; }
+                .modal-form { text-align: left; }
+                .modal-form label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #4a5568; }
+                .modal-form input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @media (max-width: 600px) {
+                    .header-section { flex-direction: column; align-items: flex-start; }
+                    .header-section > * { width: 100% !important; }
+                    .action-btn { width: 100%; text-align: center; }
+                    .modal-buttons-stack { flex-direction: column; }
+                    .pagination-wrapper { justify-content: space-between; width: 100%; }
+                }
+            `}</style>
         </div>
     );
 };
-
-// --- STYLES OBJECTS ---
-const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(71, 78, 93, 0.85)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' };
-const modalContent = { background: '#fefefe', width: '450px', borderRadius: '8px', position: 'relative', border: '1px solid #ddd', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' };
-const editModalBox = { background: '#fefefe', width: '480px', borderRadius: '8px', position: 'relative', border: '1px solid #ddd', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' };
-const containerStyle = { padding: '20px', textAlign: 'center' };
-const closeIcon = { position: 'absolute', right: '15px', top: '5px', fontSize: '30px', fontWeight: 'bold', cursor: 'pointer', color: '#aaa' };
-
-const hrStyle = { border: '1px solid #f1f1f1', marginBottom: '15px' };
-const labelStyle = { display: 'block', textAlign: 'left', fontWeight: 'bold', marginBottom: '5px', fontSize: '13px', color: '#333' };
-const inputStyle = { width: '100%', padding: '10px', margin: '4px 0 15px 0', display: 'inline-block', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' };
-
-const clearfixStyle = { display: 'flex', gap: '10px', marginTop: '10px' };
-const cancelBtn = { background: '#ccc', color: 'black', padding: '12px 20px', border: 'none', cursor: 'pointer', width: '100%', borderRadius: '4px', fontWeight: 'bold' };
-const deleteBtn = { background: '#5d67f6', color: 'white', padding: '12px 20px', border: 'none', cursor: 'pointer', width: '100%', borderRadius: '4px', fontWeight: 'bold' };
-const saveBtn = { background: '#04AA6D', color: 'white', padding: '12px 20px', border: 'none', cursor: 'pointer', width: '100%', borderRadius: '4px', fontWeight: 'bold' };
-
-const thStyle = { padding: '12px 8px', color: '#555', borderBottom: '2px solid #eee' };
-const tdStyle = { padding: '12px 8px', color: '#333' };
-const editBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' };
-const deleteBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }; 
-const lowStockBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
-const resetBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
-
-const paginationContainerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' };
-const paginationBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', fontWeight: 'bold' };
 
 export default InventoryPage;

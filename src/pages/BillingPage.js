@@ -157,68 +157,87 @@ const BillingPage = () => {
     };
 
     return (
-        <div style={{ padding: '15px', fontFamily: 'Arial, sans-serif', boxSizing: 'border-box' }}>
-            {/* 🌟 MODIFIED: Container styles flex-wrap aur padding handles responsive shifting */}
+        <div className="billing-page-wrapper">
             <div className="no-print billing-flex-container">
                 
                 {/* Medicine Stock Selector Container */}
-                <div style={{ flex: '1 1 350px', background: '#f9f9f9', padding: '20px', borderRadius: '12px', boxSizing: 'border-box' }}>
+                <div className="medicine-selector-card">
                     <h3>Select Medicines</h3>
-                    <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '5px' }}>
+                    <div className="medicine-scroll-list">
                         {medicines.map(m => (
-                            <div key={m.id} style={medItemStyle} onClick={() => addToCart(m)}>
-                                <span style={{ wordBreak: 'break-word', marginRight: '10px' }}>{m.name}</span>
-                                <b style={{ whiteSpace: 'nowrap' }}>Rs. {m.salePrice}</b>
+                            <div key={m.id} className="med-clickable-row" onClick={() => addToCart(m)}>
+                                <span className="med-item-title">{m.name}</span>
+                                <b className="med-item-price">Rs. {m.salePrice}</b>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Active Checkout Processing Billing View Container */}
-                <div style={{ flex: '1.5 1 450px', background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', boxSizing: 'border-box' }}>
-                    <h3>Current Bill</h3>
+                <div className="current-bill-card">
+                    <h3>Current Bill Counter</h3>
                     <input 
                         type="text"
                         placeholder="Enter Customer Name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        style={inputStyle}
+                        className="customer-input-field"
                     />
 
-                    {/* 🌟 MODIFIED: Added responsive wrapper table overflow check */}
-                    <div style={{ width: '100%', overflowX: 'auto', marginBottom: '15px', WebkitOverflowScrolling: 'touch' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
+                    {/* Table overflow wrapper */}
+                    <div className="cart-table-scrollarea">
+                        <table className="billing-cart-table">
                             <thead>
-                                <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
-                                    <th style={{ padding: '10px' }}>Item</th>
-                                    <th style={{ padding: '10px' }}>Price</th>
-                                    <th style={{ padding: '10px' }}>Qty</th>
-                                    <th style={{ padding: '10px' }}>Total</th>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Price</th>
+                                    <th style={{ textAlign: 'center' }}>Qty</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {cart.map(item => (
-                                    <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '10px', wordBreak: 'break-word' }}>{item.name}</td>
-                                        <td style={{ padding: '10px' }}>{item.salePrice}</td>
-                                        <td style={{ padding: '10px' }}>
-                                            <input type="number" value={item.selectedQty} min="1" onChange={(e) => updateQty(item.id, e.target.value)} style={{ width: '50px', padding: '4px', textAlign: 'center' }} />
+                                {cart.length > 0 ? (
+                                    cart.map(item => (
+                                        <tr key={item.id}>
+                                            <td style={{ wordBreak: 'break-word' }}>{item.name}</td>
+                                            <td>{item.salePrice}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input 
+                                                    type="number" 
+                                                    value={item.selectedQty} 
+                                                    min="1" 
+                                                    onChange={(e) => updateQty(item.id, e.target.value)} 
+                                                    className="cart-qty-input"
+                                                />
+                                            </td>
+                                            <td>Rs. {item.salePrice * item.selectedQty}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="4" style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                                            Cart khali hai. Medicines select karein.
                                         </td>
-                                        <td style={{ padding: '10px' }}>{item.salePrice * item.selectedQty}</td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
 
-                    <div style={{ textAlign: 'right', marginTop: '20px' }}>
-                        <h2 style={{ fontSize: 'calc(1.3rem + 0.5vw)' }}>Grand Total: Rs. {total}</h2>
-                        <button onClick={handleCheckout} disabled={cart.length === 0} style={btnStyle('#27ae60')}>Generate Bill</button>
+                    <div className="checkout-summary-section">
+                        <h2 className="grand-total-heading">Grand Total: Rs. {total}</h2>
+                        <button 
+                            onClick={handleCheckout} 
+                            disabled={cart.length === 0} 
+                            className="billing-action-btn checkout-green"
+                        >
+                            Generate Bill
+                        </button>
                         
                         {lastSavedReceipt && (
                             <div className="action-buttons-group">
-                                <button onClick={() => window.print()} style={btnStyle('#3498db')}>Print Receipt</button>
-                                <button onClick={downloadPDF} style={btnStyle('#e67e22')}>Download PDF</button>
+                                <button onClick={() => window.print()} className="billing-action-btn print-blue">Print Receipt</button>
+                                <button onClick={downloadPDF} className="billing-action-btn pdf-orange">Download PDF</button>
                             </div>
                         )}
                     </div>
@@ -227,7 +246,7 @@ const BillingPage = () => {
 
             {/* 🖨️ Thermal Slip View Layout */}
             {lastSavedReceipt && (
-                <div className="print-only" style={{ display: 'none', padding: '10px', width: '300px', margin: '0 auto', fontFamily: '"Courier New", Courier, monospace', color: '#000' }}>
+                <div className="print-only thermal-slip-view">
                     <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                         <img src={STORE_LOGO_URL} alt="Logo" style={{ width: '55px', height: '55px', borderRadius: '50%', border: '1px solid #000', padding: '3px' }} />
                     </div>
@@ -282,35 +301,53 @@ const BillingPage = () => {
                 </div>
             )}
 
-            {/* 🌟 Custom Global CSS Media Injection for layout adjustments */}
+            {/* 🌟 SCOPED GLOBAL CSS MEDIA INJECTION 🌟 */}
             <style>
                 {`
-                    .billing-flex-container {
-                        display: flex;
-                        gap: 25px;
-                        flex-wrap: wrap;
-                        width: 100%;
-                    }
-                    .action-buttons-group {
-                        margin-top: 15px;
-                        display: flex;
-                        gap: 10px;
-                        justify-content: flex-end;
-                        flex-wrap: wrap;
-                    }
+                    .billing-page-wrapper { font-family: 'Segoe UI', system-ui, sans-serif; padding: 5px; box-sizing: border-box; }
+                    .billing-flex-container { display: flex; gap: 20px; flex-wrap: wrap; width: 100%; }
+                    
+                    .medicine-selector-card { flex: 1 1 350px; background: #f9f9f9; padding: 20px; border-radius: 12px; box-sizing: border-box; border: 1px solid #e2e8f0; }
+                    .medicine-scroll-list { maxHeight: 420px; overflow-Y: auto; padding-right: 5px; }
+                    
+                    .med-clickable-row { padding: 12px; border-bottom: 1px solid #edf2f7; cursor: pointer; display: flex; justify-content: space-between; alignItems: center; background: #fff; margin-bottom: 6px; border-radius: 6px; transition: background 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+                    .med-clickable-row:hover { background: #edf2f7; }
+                    .med-item-title { word-break: break-word; margin-right: 10px; color: #2d3748; font-weight: 500; }
+                    .med-item-price { white-space: nowrap; color: #2b6cb0; }
+
+                    .current-bill-card { flex: 1.5 1 450px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); box-sizing: border-box; }
+                    .customer-input-field { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #cbd5e0; box-sizing: border-box; font-size: 15px; }
+                    
+                    .cart-table-scrollarea { width: 100%; overflow-x: auto; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
+                    .billing-cart-table { width: 100%; border-collapse: collapse; min-width: 420px; }
+                    .billing-cart-table th { padding: 10px; text-align: left; border-bottom: 2px solid #edf2f7; color: #4a5568; font-size: 14px; }
+                    .billing-cart-table td { padding: 10px; border-bottom: 1px solid #edf2f7; font-size: 14px; color: #2d3748; }
+                    .cart-qty-input { width: 55px; padding: 5px; text-align: center; border: 1px solid #cbd5e0; border-radius: 4px; }
+
+                    .checkout-summary-section { text-align: right; marginTop: 20px; }
+                    .grand-total-heading { font-size: calc(1.3rem + 0.5vw); color: #1a202c; margin-bottom: 15px; }
+                    
+                    .billing-action-btn { padding: 12px 24px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: opacity 0.2s; }
+                    .billing-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                    .checkout-green { background-color: #27ae60; width: auto; }
+                    
+                    .action-buttons-group { margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+                    .print-blue { background-color: #3498db; }
+                    .pdf-orange { background-color: #e67e22; }
+
+                    .thermal-slip-view { padding: 10px; width: 300px; margin: '0 auto'; fontFamily: '"Courier New", Courier, monospace'; color: '#000'; }
+
+                    /* 📱 MOBILE RESPONSIONS (768px and down) */
                     @media (max-width: 768px) {
-                        .billing-flex-container {
-                            flex-direction: column;
-                            gap: 20px;
-                        }
-                        .action-buttons-group, .action-buttons-group button {
-                            width: 100%;
-                        }
-                        button {
-                            width: 100%;
-                            margin-bottom: 5px;
-                        }
+                        .billing-flex-container { flex-direction: column; gap: 15px; }
+                        .medicine-selector-card, .current-bill-card { padding: 15px; }
+                        .medicine-scroll-list { maxHeight: 280px; } /* Mobile par list choti aur clean scroll hogi */
+                        
+                        .checkout-summary-section { text-align: left; }
+                        .billing-action-btn { width: 100% !important; margin-bottom: 8px; display: block; text-align: center; box-sizing: border-box; }
+                        .action-buttons-group { width: 100%; flex-direction: column; gap: 0; }
                     }
+
                     @media print {
                         .no-print { display: none !important; }
                         .print-only { display: block !important; }
@@ -321,9 +358,5 @@ const BillingPage = () => {
         </div>
     );
 };
-
-const medItemStyle = { padding: '12px', borderBottom: '1px solid #eee', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', marginBottom: '6px', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' };
-const inputStyle = { width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const btnStyle = (color) => ({ padding: '12px 20px', backgroundColor: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', minWidth: '120px' });
 
 export default BillingPage;
