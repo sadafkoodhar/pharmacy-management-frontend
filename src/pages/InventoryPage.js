@@ -296,7 +296,7 @@ const saveBtn = { background: '#04AA6D', color: 'white', padding: '12px 20px', b
 const thStyle = { padding: '12px 8px', color: '#555', borderBottom: '2px solid #eee' };
 const tdStyle = { padding: '12px 8px', color: '#333' };
 const editBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' };
-const deleteBtnStyle = { background: '#e74c3c', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }; 
+const deleteBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '6px 12px', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }; 
 const lowStockBtnStyle = { background: '#5d67f6', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
 const resetBtnStyle = { background: '#2ecc71', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' };
 
